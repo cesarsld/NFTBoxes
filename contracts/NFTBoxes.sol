@@ -5,8 +5,41 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "../interfaces/IVendingMachine.sol";
 import "./Controller.sol";
 
-contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
+contract HasSecondarySaleFees is ERC165 {
+    
+    address payable teamAddress;
+    uint256 teamSecondaryBps;  
+        
+   /*
+    * bytes4(keccak256('getFeeBps(uint256)')) == 0x0ebd4c7f
+    * bytes4(keccak256('getFeeRecipients(uint256)')) == 0xb9c4d9fb
+    *
+    * => 0x0ebd4c7f ^ 0xb9c4d9fb == 0xb7799584
+    */
+    
+    bytes4 private constant _INTERFACE_ID_FEES = 0xb7799584;
+    
+    constructor() public {
+        _registerInterface(_INTERFACE_ID_FEES);
+    }
 
+    function getFeeRecipients(uint256 id) public view returns (address payable[] memory){
+        address payable[] memory addressArray;
+        addressArray[0] = teamAddress;
+        return addressArray;
+    }
+    
+    function getFeeBps(uint256 id) public view returns (uint[] memory){
+        uint[] memory bpsArray;
+        bpsArray[0] = teamSecondaryBps; 
+        return bpsArray;
+    }
+ 
+}
+
+
+contract NFTBoxesBox is ERC721("NFTbox", "[Box]"), Controller, HasSecondarySaleFees {
+    
 	struct BoxMould{
 		uint8				live; // bool
 		uint8				shared; // bool
@@ -241,12 +274,20 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 		return boxMoulds[_id].ids;
 	}
 
-	function getBoxMetaData(uint256 _id) external view returns 
-	(uint256, uint256, uint128, string memory, string memory, string memory, string memory, string memory) {
-		Box memory box = boxes[_id];
-		BoxMould memory mould = boxMoulds[box.mouldId];
-		return (box.mouldId, box.edition, mould.maxEdition, mould.name, mould.series, mould.theme, mould.ipfsHash, mould.arweaveHash);
-	}
+    function updateTeamAddress(address payable newTeamAddress) public onlyOwner {
+        teamAddress = newTeamAddress;
+    }
+    
+    function updateSecondaryFee(uint256 newSecondaryBps) public onlyOwner {
+        teamSecondaryBps = newSecondaryBps;
+    }
+
+    function getBoxMetaData(uint256 _id) external view returns 
+    (uint256 boxId, uint256 boxEdition, uint128 boxMax, string memory boxName, string memory boxSeries, string memory boxTheme, string memory boxHashIPFS, string memory boxHashArweave) {
+        Box memory box = boxes[_id];
+        BoxMould memory mould = boxMoulds[box.mouldId];
+        return (box.mouldId, box.edition, mould.maxEdition, mould.name, mould.series, mould.theme, mould.ipfsHash, mould.arweaveHash);
+    }
 
 	function _transfer(address from, address to, uint256 tokenId) internal override {
 		Box memory box = boxes[tokenId];
