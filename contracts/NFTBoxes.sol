@@ -11,16 +11,21 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 		uint8				live; // bool
 		uint8				shared; // bool
 		uint128				maxEdition;
+		uint152				maxBuyAmount;
 		uint128				currentEditionCount;
 		uint256				price;
 		uint256[]			ids;
 		address payable[]	artists;
 		uint256[]			shares;
 		string				name;
+		string				series;
+		string				theme;
+		string				ipfsHash;
+		string				arweaveHash;
 	}
 
 	struct Box {
-		uint256				boxId;
+		uint256				mouldId;
 		uint256				edition;
 	}
 
@@ -36,11 +41,22 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 	mapping(address => uint256) public teamShare;
 	address payable[] public team;
 
+	mapping(address => bool) public authorisedCaller;
+
 	event BoxMouldCreated(uint256 id);
 	event BoxBought(uint256 indexed boxMould, uint256 boxEdition, uint256 tokenId);
 
 	function updateURI(string memory newURI) public onlyOwner {
 		_setBaseURI(newURI);
+	}
+
+	modifier authorised() {
+		require(authorisedCaller[msg.sender] || msg.sender == owner, "NFTBoxes: Not authorised to execute.");
+		_;
+	}
+
+	function setCaller(address _caller, bool _value) external onlyOwner {
+		authorisedCaller[_caller] = _value;
 	}
 
 	function addTeamMember(address payable _member) external onlyOwner {
@@ -72,11 +88,16 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 
 	function createBoxMould(
 		uint128 _max,
+		uint128 _maxBuyAmount,
 		uint256 _price,
 		uint256[] memory _ids,
 		address payable[] memory _artists,
 		uint256[] memory _shares,
-		string memory _name)
+		string memory _name,
+		string memory _series,
+		string memory _theme,
+		string memory _ipfsHash,
+		string memory _arweaveHash)
 		external
 		onlyOwner {
 		require(_artists.length == _shares.length, "NFTBoxes: arrays are not of same length.");
@@ -84,12 +105,17 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 			live: uint8(0),
 			shared: uint8(0),
 			maxEdition: _max,
+			maxBuyAmount: _maxBuyAmount,
 			currentEditionCount: 0,
 			price: _price,
 			ids: _ids,
 			artists: _artists,
 			shares: _shares,
-			name: _name
+			name: _name,
+			series: _series,
+			theme: _theme,
+			ipfsHash: _ipfsHash,
+			arweaveHash: _arweaveHash
 		});
 		boxMouldCount++;
 	}
@@ -124,26 +150,29 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 
 	function buyManyBoxes(uint256 _id, uint128 _quantity) external payable {
 		BoxMould storage boxMould = boxMoulds[_id];
+		uint128 currentEdition = boxMould.currentEditionCount;
+		uint128 max = boxMould.maxEdition;
 		require(_id <= boxMouldCount && _id > 0, "NFTBoxes: Mould ID does not exist.");
 		require(boxMould.price.mul(_quantity) == msg.value, "NFTBoxes: Wrong total price.");
-		require(boxMould.currentEditionCount + _quantity <= boxMould.maxEdition, "NFTBoxes: Minting too many boxes.");
+		require(currentEdition + _quantity <= max, "NFTBoxes: Minting too many boxes.");
+		require(_quantity <= boxMould.maxBuyAmount, "NFTBoxes: Cannot buy this many boxes.");
 
 		for (uint128 i = 0; i < _quantity; i++)
-			_buy(boxMould, _id, i);
+			_buy(currentEdition, _id, i);
 		boxMould.currentEditionCount += _quantity;
-		if (boxMould.currentEditionCount == boxMould.maxEdition)
+		if (currentEdition + _quantity == max)
 			boxMould.live = uint8(1);
 	}
 
-	function _buy(BoxMould storage boxMould, uint256 _id, uint256 _new) internal {
-		boxes[totalSupply()] = Box(_id, boxMould.currentEditionCount + _new);
+	function _buy(uint128 _currentEdition, uint256 _id, uint256 _new) internal {
+		boxes[totalSupply()] = Box(_id, _currentEdition + _new);
 		//safe mint?
-		emit BoxBought(_id, boxMould.currentEditionCount + _new, totalSupply());
+		emit BoxBought(_id, _currentEdition + _new, totalSupply());
 		_mint(msg.sender, totalSupply());
 	}
 
 	// close a sale if not sold out
-	function closeBox(uint256 _id) external onlyOwner {
+	function closeBox(uint256 _id) external authorised {
 		BoxMould storage boxMould = boxMoulds[_id];
 		require(_id <= boxMouldCount && _id > 0, "NFTBoxes: Mould ID does not exist.");
 		boxMould.live = uint8(1);
@@ -153,7 +182,7 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 		vendingMachine = IVendingMachine(_machine);
 	}
 
-	function distributeOffchain(uint256 _id, address[][] calldata _recipients, uint256[] calldata _ids) external onlyOwner {
+	function distributeOffchain(uint256 _id, address[][] calldata _recipients, uint256[] calldata _ids) external authorised {
 		BoxMould memory boxMould= boxMoulds[_id];
 		require(boxMould.live == 1, "NTFBoxes: Box is still live, cannot start distribution");
 		require (_recipients[0].length == boxMould.ids.length &&
@@ -212,9 +241,16 @@ contract NFTBoxes is ERC721("NFT Boxes", "BOX"), Controller {
 		return boxMoulds[_id].ids;
 	}
 
+	function getBoxMetaData(uint256 _id) external view returns 
+	(uint256, uint256, uint128, string memory, string memory, string memory, string memory, string memory) {
+		Box memory box = boxes[_id];
+		BoxMould memory mould = boxMoulds[box.mouldId];
+		return (box.mouldId, box.edition, mould.maxEdition, mould.name, mould.series, mould.theme, mould.ipfsHash, mould.arweaveHash);
+	}
+
 	function _transfer(address from, address to, uint256 tokenId) internal override {
 		Box memory box = boxes[tokenId];
-		require(!lockedBoxes[box.boxId], "NFTBoxes: Box is locked");
+		require(!lockedBoxes[box.mouldId], "NFTBoxes: Box is locked");
 		super._transfer(from, to, tokenId);
 	}
 }
