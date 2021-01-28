@@ -3,7 +3,7 @@ import csv
 
 def main():
     boxId = 1
-    seedStr = '0x6b81fc5c9ff7a165c1f5254bc7dff5280dbc1d7d6d2f16a3cb9de105b1b67561'
+    seedStr = '0xcde1073aee4f2a1ff2a96e58eff81caefe0be881d70703eddf4774aa62eadf2d'
     byteSeed = web3.toBytes(hexstr=seedStr)
     seed  = web3.soliditySha3(['bytes32'], [byteSeed])
     seedInt = web3.toInt(seed)

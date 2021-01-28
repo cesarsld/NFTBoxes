@@ -5,6 +5,7 @@ def main():
     user = accounts.load('moist')
 
     boxId = 1
+    #  NEEDS TO BE CHANGED IF SCRIPTS FUCKS UP
     offset = 0
     box = NFTBoxes.at('0xE3Bc15412a26039384ED773cA5882D10F8BD48c7')
     dissArr = []
