@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "../interfaces/IVendingMachine.sol";
 import "./Controller.sol";
 
-contract HasSecondarySaleFees is ERC165 {
+contract HasSecondaryBoxSaleFees is ERC165 {
     
     address payable teamAddress;
     uint256 teamSecondaryBps;  
@@ -38,7 +38,7 @@ contract HasSecondarySaleFees is ERC165 {
 }
 
 
-contract NFTBoxesBox is ERC721("NFTbox", "[Box]"), Controller, HasSecondarySaleFees {
+contract NFTBoxesBox is ERC721("NFTbox", "[Box]"), Controller, HasSecondaryBoxSaleFees {
     
 	struct BoxMould{
 		uint8				live; // bool
@@ -47,7 +47,6 @@ contract NFTBoxesBox is ERC721("NFTbox", "[Box]"), Controller, HasSecondarySaleF
 		uint152				maxBuyAmount;
 		uint128				currentEditionCount;
 		uint256				price;
-		uint256[]			ids;
 		address payable[]	artists;
 		uint256[]			shares;
 		string				name;
@@ -123,7 +122,6 @@ contract NFTBoxesBox is ERC721("NFTbox", "[Box]"), Controller, HasSecondarySaleF
 		uint128 _max,
 		uint128 _maxBuyAmount,
 		uint256 _price,
-		uint256[] memory _ids,
 		address payable[] memory _artists,
 		uint256[] memory _shares,
 		string memory _name,
@@ -141,7 +139,6 @@ contract NFTBoxesBox is ERC721("NFTbox", "[Box]"), Controller, HasSecondarySaleF
 			maxBuyAmount: _maxBuyAmount,
 			currentEditionCount: 0,
 			price: _price,
-			ids: _ids,
 			artists: _artists,
 			shares: _shares,
 			name: _name,
@@ -151,6 +148,8 @@ contract NFTBoxesBox is ERC721("NFTbox", "[Box]"), Controller, HasSecondarySaleF
 			arweaveHash: _arweaveHash
 		});
 		boxMouldCount++;
+		lockedBoxes[boxMouldCount] = true;
+		emit BoxMouldCreated(boxMouldCount);
 	}
 
 	function removeArtist(uint256 _id, address payable _artist) external onlyOwner {
@@ -186,6 +185,7 @@ contract NFTBoxesBox is ERC721("NFTbox", "[Box]"), Controller, HasSecondarySaleF
 		uint128 currentEdition = boxMould.currentEditionCount;
 		uint128 max = boxMould.maxEdition;
 		require(_id <= boxMouldCount && _id > 0, "NFTBoxes: Mould ID does not exist.");
+		require(!lockedBoxes[_id], "NFTBoxes: Box is locked");
 		require(boxMould.price.mul(_quantity) == msg.value, "NFTBoxes: Wrong total price.");
 		require(currentEdition + _quantity <= max, "NFTBoxes: Minting too many boxes.");
 		require(_quantity <= boxMould.maxBuyAmount, "NFTBoxes: Cannot buy this many boxes.");
@@ -218,16 +218,13 @@ contract NFTBoxesBox is ERC721("NFTbox", "[Box]"), Controller, HasSecondarySaleF
 	function distributeOffchain(uint256 _id, address[][] calldata _recipients, uint256[] calldata _ids) external authorised {
 		BoxMould memory boxMould= boxMoulds[_id];
 		require(boxMould.live == 1, "NTFBoxes: Box is still live, cannot start distribution");
-		require (_recipients[0].length == boxMould.ids.length &&
-			_recipients[0].length == _ids.length, "NFTBoxes: Wrong array size.");
-		for (uint256 k = 0 ; k < _ids.length; k++)
-			require(boxMould.ids[k] == _ids[k], "NFTBoxes: Wrong art ID.");
+		require (_recipients[0].length == _ids.length, "NFTBoxes: Wrong array size.");
 
 		// i is batch number
 		for (uint256 i = 0; i < _recipients.length; i++) {
 			// j is for the index of nft ID to send
 			for (uint256 j = 0;j <  _recipients[0].length; j++)
-				vendingMachine.JOYtoyMachineFor(_ids[j], _recipients[i][j]);
+				vendingMachine.NFTMachineFor(_ids[j], _recipients[i][j]);
 		}
 	}
 
@@ -266,14 +263,13 @@ contract NFTBoxesBox is ERC721("NFTbox", "[Box]"), Controller, HasSecondarySaleF
 		return keccak256(abi.encodePacked(_seed));
 	}
 
-	function getIdsLength(uint256 _id) external view returns (uint256) {
-		return boxMoulds[_id].ids.length;
+	function getArtist(uint256 _id) external view returns (address payable[] memory) {
+		return boxMoulds[_id].artists;
 	}
 
-	function getIds(uint256 _id) external view returns (uint256[] memory) {
-		return boxMoulds[_id].ids;
+		function getArtistShares(uint256 _id) external view returns (uint256[] memory) {
+		return boxMoulds[_id].shares;
 	}
-
     function updateTeamAddress(address payable newTeamAddress) public onlyOwner {
         teamAddress = newTeamAddress;
     }

@@ -9,7 +9,7 @@ def main():
     offset = 0
     box = NFTBoxes.at('0xE3Bc15412a26039384ED773cA5882D10F8BD48c7')
     dissArr = []
-    ids = box.getIds(boxId)
+    ids = box.getIds(boxId) # this line would be ids = [1, 2, 3, 4, 5, 6, 7] and be changed each month
     with open(f'boxHolders_{boxId}.csv') as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:

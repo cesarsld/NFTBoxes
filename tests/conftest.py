@@ -28,12 +28,12 @@ def big(accounts):
     return accounts.at("0x742d35cc6634c0532925a3b844bc454e4438f44e", force=True)
 
 @pytest.fixture()
-def nftbox(NFTBoxes, minter, accounts):
-    return NFTBoxes.deploy({'from':minter})
+def nftbox(NFTBoxesBox, minter, accounts):
+    return NFTBoxesBox.deploy({'from':minter})
 
 @pytest.fixture()
-def joy(JOYtoys, minter, accounts):
-    return JOYtoys.deploy({'from':minter})
+def joy(NFTBoxesNFT, minter, accounts):
+    return NFTBoxesNFT.deploy({'from':minter})
 
 @pytest.fixture()
 def testnft(TestNFT, minter):
