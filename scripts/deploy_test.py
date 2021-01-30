@@ -1,25 +1,42 @@
-from brownie import NFTBoxes, JOYtoys, accounts, chain, interface, Wei, web3
+from brownie import NFTBoxesBox, NFTBoxesNFT, accounts, chain, interface, Wei, web3
 from time import sleep
 
 def main():
-    # user2 = accounts.load('owl')
     user = accounts.load('moist')
-    # box = NFTBoxes.at('0xfa4Ff49c6ab0Ad4Fc2f5729F2807a28D497Db5c3')
-    # joy = JOYtoys.at('0x4de525edb160dc7b773cd249554d8ba98c550d07')
-    box = NFTBoxes.deploy({'from':user}, publish_source=False)
-    # joy = JOYtoys.deploy({'from':user}, publish_source=False)
-    # joy = JOYtoys.at('0x728dA69402B28048F96ab9564f577Be232952957')
-    box.transferOwnership('0x63a9dbCe75413036B2B778E670aaBd4493aAF9F3', {'from':user})
-    # joy.transferOwnership('0x63a9dbCe75413036B2B778E670aaBd4493aAF9F3', {'from':user})
-    # joy.setCaller(box, True, {'from':user})
-    # joy.createJOYtoy("c0ffee", "someType", "over 9000", "toy", "fun", 100, True, 0, 0, {'from':user})
-    # joy.setCaller(user, True, {'from':user})
-    # joy.JOYtoyMachineFor(1, user, {'from':user})
-    # joy.JOYtoyMachineFor(1, user, {'from':user})
-    # joy.JOYtoyMachineFor(1, user, {'from':user})
-    # box.setVendingMachine(joy, {'from': user})
-    # box.createBoxMould(40, Wei('0 ether'), [11, 12, 13, 14, 15, 16, 17, 18, 19, 20], [], [], "This is a test box", {'from':user})
-    # box.buyManyBoxes(1, 20, {'from':user})
-    # box.buyManyBoxes(1, 20, {'from':user2})
-    # for i in range(10):
-    #     joy.createJOYtoy(f'c0ffee{i + 11}', "someType", "over 9000", "toy", "fun", 40, True, 0, 0, {'from':user})
+    box = NFTBoxesBox.deploy({'from':user}, publish_source=False)
+
+    box.setCaller(user, True, {'from':user})
+    box.setCaller('0x63a9dbCe75413036B2B778E670aaBd4493aAF9F3', True, {'from':user})
+
+    artists = [
+        '0xca2b6756486E598580792CC5C0A27F13D57E630f',
+        '0x576a655161B5502dCf40602BE1f3519A89b71658',
+        '0x707611854951352F9Fda16D6b5162b299112Dfba',
+        '0xa8E376248FB85dD9680FdbeEcC3ec72e20C37CAc',
+        '0x7535Da202d79cA57299918c60C218f9b779AA14c',
+        '0x84300dCc7ca9Cf447e886fA17C11fa22557d1AF0',
+        '0x7485ac6d8534691993348D51ab0F131a19FfF763'
+    ]
+    artist_shares = [200,20,20,20,40,20,20]
+
+
+    box.createBoxMould(500, 5, '0.5 ether', artists, artist_shares, 'Genesis Box',
+        'Main', 'Innovators',
+        'QmNSWXCtpk8YEZWUcp5X9yFYXyRJbCbm5FCRJvZyvK29sy',
+        'bSFksvslqiyEGj7ABWOUkx2wJZkkrSca5Puts3CTFYc', {'from': user})
+
+    # box.addTeamMember('0x3428B1746Dfd26C7C725913D829BE2706AA89B2e', {'from': user})
+    # box.addTeamMember('0x63a9dbce75413036b2b778e670aabd4493aaf9f3', {'from': user})
+    # box.addTeamMember('0x4c7bedfa26c744e6bd61cbdf86f3fc4a76dca073', {'from': user})
+    # box.addTeamMember('0xf521Bb7437bEc77b0B15286dC3f49A87b9946773', {'from': user})
+    # box.addTeamMember('0x3945476E477De76d53b4833a46c806Ef3D72b21E', {'from': user})
+
+    # box.setTeamShare('0x3428B1746Dfd26C7C725913D829BE2706AA89B2e', 580, {'from': user})
+    # box.setTeamShare('0x63a9dbce75413036b2b778e670aabd4493aaf9f3', 10, {'from': user})
+    # box.setTeamShare('0x4c7bedfa26c744e6bd61cbdf86f3fc4a76dca073', 30, {'from': user})
+    # box.setTeamShare('0xf521Bb7437bEc77b0B15286dC3f49A87b9946773', 30, {'from': user})
+    # box.setTeamShare('0x3945476E477De76d53b4833a46c806Ef3D72b21E', 10, {'from': user})
+
+
+    box.transferOwnership('0xAd67593b01385792CA671ABe6d975801c2e86D22', {'from':user})
+

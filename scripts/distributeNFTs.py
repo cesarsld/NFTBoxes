@@ -1,4 +1,4 @@
-from brownie import NFTBoxes, accounts
+from brownie import NFTBoxesBox, accounts, Wei
 import csv
 
 def main():
@@ -7,9 +7,9 @@ def main():
     boxId = 1
     #  NEEDS TO BE CHANGED IF SCRIPTS FUCKS UP
     offset = 0
-    box = NFTBoxes.at('0xE3Bc15412a26039384ED773cA5882D10F8BD48c7')
+    box = NFTBoxesBox.at('0xB9134aef577b7cb43B03856E308ebDC80d51E126')
     dissArr = []
-    ids = box.getIds(boxId) # this line would be ids = [1, 2, 3, 4, 5, 6, 7] and be changed each month
+    ids = [1,2,3,4,5,6,7,8,9] # this line would be ids = [1, 2, 3, 4, 5, 6, 7] and be changed each month
     with open(f'boxHolders_{boxId}.csv') as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:

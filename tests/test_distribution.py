@@ -84,10 +84,10 @@ def test_box(nftbox, minter, accounts):
     assert nftbox.ownerOf(0) == u1
     assert nftbox.ownerOf(1) == u2
 
-    assert nftbox.boxes(0) == (1, 0)
-    assert nftbox.boxes(1) == (1, 1)
-    assert nftbox.boxes(2) == (2, 0)
-    assert nftbox.boxes(3) == (2, 1)
+    assert nftbox.boxes(0) == (1, 1)
+    assert nftbox.boxes(1) == (1, 2)
+    assert nftbox.boxes(2) == (2, 1)
+    assert nftbox.boxes(3) == (2, 2)
 
 def test_box_editions(nftbox, minter, accounts):
     nftbox.createBoxMould(50, 50, Wei('0.1 ether'), [], [], "This is a test box", "", "", "", "", {'from':minter})
@@ -101,12 +101,12 @@ def test_box_editions(nftbox, minter, accounts):
     nftbox.buyManyBoxes(2, 5, {'from':u1, "value": Wei("0.2 ether") * 5})
 
     for i in range(5):
-        assert nftbox.boxes(i) == (1, i)
-    assert nftbox.boxes(5) == (1, 5)
+        assert nftbox.boxes(i) == (1, i + 1)
+    assert nftbox.boxes(5) == (1, 6)
     for i in range(6, 6 + 7):
-        assert nftbox.boxes(i) == (1, i)
+        assert nftbox.boxes(i) == (1, i + 1)
     for i in range (13, 18):
-        assert nftbox.boxes(i) == (2, i - 13)
+        assert nftbox.boxes(i) == (2, i - 13 + 1)
 
 def test_not_buyable_edition_many(nftbox, minter, accounts):
     nftbox.createBoxMould(5, 5, Wei('0.01 ether'), [], [], "This is a test box", "", "", "", "", {'from':minter})
@@ -141,10 +141,10 @@ def test_many_of_one(nftbox, minter, accounts):
     for i in range(10):
         nftbox.buyManyBoxes(1, 1, {'from':accounts[0], "value": Wei("0.01 ether")})
         assert nftbox.ownerOf(2 * i + supply) == accounts[0]
-        assert nftbox.boxes(2 * i + supply) == (1, i * 2)
+        assert nftbox.boxes(2 * i + supply) == (1, i * 2 + 1)
         nftbox.buyManyBoxes(1, 1, {'from':accounts[1], "value": Wei("0.01 ether")})
         assert nftbox.ownerOf(2 * i + supply + 1) == accounts[1]
-        assert nftbox.boxes(2 * i + 1 + supply) == (1, i * 2 + 1)
+        assert nftbox.boxes(2 * i + 1 + supply) == (1, i * 2 + 1 + 1)
 
 def test_many_at_once(nftbox, minter, accounts):
     nftbox.createBoxMould(30, 30, Wei('0.01 ether'), [], [], "This is a test box", "", "", "", "", {'from':minter})
@@ -156,10 +156,10 @@ def test_many_at_once(nftbox, minter, accounts):
     for i in range(10):
         nftbox.buyManyBoxes(1, 1, {'from':accounts[0], "value": Wei("0.01 ether")})
         assert nftbox.ownerOf(2 * i + supply) == accounts[0]
-        assert nftbox.boxes(2 * i + supply) == (1, i * 2)
+        assert nftbox.boxes(2 * i + supply) == (1, i * 2 + 1)
         nftbox.buyManyBoxes(1, 1, {'from':accounts[1], "value": Wei("0.01 ether")})
         assert nftbox.ownerOf(2 * i + supply + 1) == accounts[1]
-        assert nftbox.boxes(2 * i + 1 + supply) == (1, i * 2 + 1)
+        assert nftbox.boxes(2 * i + 1 + supply) == (1, i * 2 + 1 + 1)
     nftbox.buyManyBoxes(1, 5, {'from':accounts[0], "value": Wei("0.01 ether") * 5})
     with brownie.reverts("NFTBoxes: Wrong total price."):
         nftbox.buyManyBoxes(1, 5, {'from':accounts[0], "value": Wei("0.01 ether")})

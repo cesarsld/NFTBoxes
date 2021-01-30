@@ -3,7 +3,7 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "../interfaces/IVendingMachine.sol";
-import "./Controller.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract HasSecondaryBoxSaleFees is ERC165 {
     
@@ -38,7 +38,7 @@ contract HasSecondaryBoxSaleFees is ERC165 {
 }
 
 
-contract NFTBoxesBox is ERC721("NFTbox", "[Box]"), Controller, HasSecondaryBoxSaleFees {
+contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleFees {
     
 	struct BoxMould{
 		uint8				live; // bool
@@ -78,12 +78,27 @@ contract NFTBoxesBox is ERC721("NFTbox", "[Box]"), Controller, HasSecondaryBoxSa
 	event BoxMouldCreated(uint256 id);
 	event BoxBought(uint256 indexed boxMould, uint256 boxEdition, uint256 tokenId);
 
+	constructor() public {
+		_setBaseURI("https://nftboxesbox.azurewebsites.net/api/HttpTrigger?id=");
+		team.push(payable(0x3428B1746Dfd26C7C725913D829BE2706AA89B2e));
+		team.push(payable(0x63a9dbCe75413036B2B778E670aaBd4493aAF9F3));
+		team.push(payable(0x4C7BEdfA26C744e6bd61CBdF86F3fc4a76DCa073));
+		team.push(payable(0xf521Bb7437bEc77b0B15286dC3f49A87b9946773));
+		team.push(payable(0x3945476E477De76d53b4833a46c806Ef3D72b21E));
+
+		teamShare[address(0x3428B1746Dfd26C7C725913D829BE2706AA89B2e)] = 580;
+		teamShare[address(0x63a9dbCe75413036B2B778E670aaBd4493aAF9F3)] = 10;
+		teamShare[address(0x4C7BEdfA26C744e6bd61CBdF86F3fc4a76DCa073)] = 30;
+		teamShare[address(0xf521Bb7437bEc77b0B15286dC3f49A87b9946773)] = 30;
+		teamShare[address(0x3945476E477De76d53b4833a46c806Ef3D72b21E)] = 10;
+	}
+
 	function updateURI(string memory newURI) public onlyOwner {
 		_setBaseURI(newURI);
 	}
 
 	modifier authorised() {
-		require(authorisedCaller[msg.sender] || msg.sender == owner, "NFTBoxes: Not authorised to execute.");
+		require(authorisedCaller[msg.sender] || msg.sender == owner(), "NFTBoxes: Not authorised to execute.");
 		_;
 	}
 
@@ -113,7 +128,7 @@ contract NFTBoxesBox is ERC721("NFTbox", "[Box]"), Controller, HasSecondaryBoxSa
 				teamShare[_member] = _share;
 	}
 
-	function setLockOnBox(uint256 _id, bool _lock) external onlyOwner {
+	function setLockOnBox(uint256 _id, bool _lock) external authorised {
 		require(_id <= boxMouldCount && _id > 0, "NFTBoxes: Mould ID does not exist.");
 		lockedBoxes[_id] = _lock;
 	}
@@ -198,10 +213,10 @@ contract NFTBoxesBox is ERC721("NFTbox", "[Box]"), Controller, HasSecondaryBoxSa
 	}
 
 	function _buy(uint128 _currentEdition, uint256 _id, uint256 _new) internal {
-		boxes[totalSupply()] = Box(_id, _currentEdition + _new);
+		boxes[totalSupply() + 1] = Box(_id, _currentEdition + _new + 1);
 		//safe mint?
 		emit BoxBought(_id, _currentEdition + _new, totalSupply());
-		_mint(msg.sender, totalSupply());
+		_mint(msg.sender, totalSupply() + 1);
 	}
 
 	// close a sale if not sold out
@@ -267,9 +282,10 @@ contract NFTBoxesBox is ERC721("NFTbox", "[Box]"), Controller, HasSecondaryBoxSa
 		return boxMoulds[_id].artists;
 	}
 
-		function getArtistShares(uint256 _id) external view returns (uint256[] memory) {
+	function getArtistShares(uint256 _id) external view returns (uint256[] memory) {
 		return boxMoulds[_id].shares;
 	}
+
     function updateTeamAddress(address payable newTeamAddress) public onlyOwner {
         teamAddress = newTeamAddress;
     }

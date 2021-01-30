@@ -1,15 +1,15 @@
-from brownie import NFTBoxes, web3
+from brownie import NFTBoxesBox, web3
 import csv
 
 def main():
     boxId = 1
-    seedStr = '0xcde1073aee4f2a1ff2a96e58eff81caefe0be881d70703eddf4774aa62eadf2d'
+    seedStr = '0xc63e18417049d1aed1dc4bea9f25838f3423fcd552bb316546f6b92e4979065c'
     byteSeed = web3.toBytes(hexstr=seedStr)
     seed  = web3.soliditySha3(['bytes32'], [byteSeed])
     seedInt = web3.toInt(seed)
-    box = NFTBoxes.at('0xE3Bc15412a26039384ED773cA5882D10F8BD48c7')
+    box = NFTBoxesBox.at('0xB9134aef577b7cb43B03856E308ebDC80d51E126')
     print(f'Box contract at {box.address}\nFetching holders of box edition {boxId}...')
-    ids = box.getIdsLength(boxId)
+    ids = 9
     box_contract = web3.eth.contract(address=box.address, abi=box.abi)
     filt = box_contract.events.BoxBought.createFilter(fromBlock=0, toBlock= 'latest', argument_filters={'boxMould':boxId})
     res = filt.get_all_entries()

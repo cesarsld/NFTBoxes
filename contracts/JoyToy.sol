@@ -48,7 +48,7 @@ contract NFTBoxesNFT is ERC721, Ownable, HasSecondarySaleFees {
 	using SafeMath for uint256;    
 
 	uint256 NFTIndex;
-	address boxContract;
+	address public boxContract;
 
 	mapping(address => bool) public authorisedCaller;
 
