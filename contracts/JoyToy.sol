@@ -8,8 +8,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract HasSecondarySaleFees is ERC165 {
 	
-	mapping(uint256 => address payable) royaltyAddressMemory;
-	mapping(uint256 => uint256) royaltyMemory;  
+	mapping(uint256 => address payable[]) royaltyAddressMemory;
+	mapping(uint256 => uint256[]) royaltyMemory;  
 	mapping(uint256 => uint256) artworkNFTReference;
 		
    /*
@@ -25,22 +25,15 @@ contract HasSecondarySaleFees is ERC165 {
 		_registerInterface(_INTERFACE_ID_FEES);
 	}
 
-	function getFeeRecipients(uint256 id) public view returns (address payable[] memory){
+	function getFeeRecipients(uint256 id) external view returns (address payable[] memory){
 		uint256 NFTRef = artworkNFTReference[id];
-		
-		address payable[] memory addressArray;
-		addressArray[0] = royaltyAddressMemory[NFTRef];
-		return addressArray;
+		return royaltyAddressMemory[NFTRef];
 	}
-	
-	function getFeeBps(uint256 id) public view returns (uint[] memory){
+
+	function getFeeBps(uint256 id) external view returns (uint[] memory){
 		uint256 NFTRef = artworkNFTReference[id];
-		
-		uint[] memory bpsArray;
-		bpsArray[0] = royaltyMemory[NFTRef];
-		return bpsArray;
+		return royaltyMemory[NFTRef];
 	}
- 
 }
 
 
@@ -102,8 +95,8 @@ contract NFTBoxesNFT is ERC721, Ownable, HasSecondarySaleFees {
 		string memory artTitle,
 		string memory artworkType,
 		string memory boxDetails,
-		address payable royaltyAddress,
-		uint256 royaltyBps) 
+		address payable[] memory royaltyAddress,
+		uint256[] memory royaltyBps) 
 		public onlyOwner {
 		mintingActive[NFTIndex] = true;
 		
@@ -128,7 +121,6 @@ contract NFTBoxesNFT is ERC721, Ownable, HasSecondarySaleFees {
 		
 		emit NewNFTMouldCreated(NFTIndex, artworkHashIPFS, artworkHashArweave, artistName, editionSize, artTitle, artworkType, boxDetails);
 		emit NewNFTMouldSignatures(NFTIndex, signatureAddress, signatureHash, signatureMessage);
-		emit NewNFTMouldRoyalties(royaltyAddress, royaltyBps);
 			
 		NFTIndex = NFTIndex + 1;
 	}
@@ -191,15 +183,7 @@ contract NFTBoxesNFT is ERC721, Ownable, HasSecondarySaleFees {
 
 		isActive = mintingActive[NFTRef];
 	}
-	
-	function getRoyaltyData(uint256 tokenId) public view returns (address payable artistAddress, uint256 royaltyFeeById) {
-		require(_exists(tokenId), "Token does not exist.");
-		uint256 NFTRef = artworkNFTReference[tokenId];
-		
-		artistAddress = royaltyAddressMemory[NFTRef];
-		royaltyFeeById = royaltyMemory[NFTRef];
-	}
-	
+
 	function getSignatureData(uint256 tokenId) public view returns (address signatureAddress, string memory signatureHash, string memory signatureMessage) {
 		require(_exists(tokenId), "Token does not exist.");
 		uint256 NFTRef = artworkNFTReference[tokenId];
@@ -224,12 +208,7 @@ contract NFTBoxesNFT is ERC721, Ownable, HasSecondarySaleFees {
 		
 		isActive = mintingActive[NFTId];
 	}
-	
-	function NFTMouldRoyaltyData(uint256 NFTId) public view returns (address payable artistAddress, uint256 royaltyFeeById) {
-		artistAddress = royaltyAddressMemory[NFTId];
-		royaltyFeeById = royaltyMemory[NFTId];
-	}
-	
+
 	function NFTMouldSignatureData(uint256 NFTId) public view returns (address signatureAddress, string memory signatureHash, string memory signatureMessage) {
 		signatureAddress = signatureAddressMemory[NFTId];
 		signatureHash = signatureHashMemory[NFTId];

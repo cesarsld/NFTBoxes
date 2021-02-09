@@ -25,18 +25,5 @@ def main():
         'QmNSWXCtpk8YEZWUcp5X9yFYXyRJbCbm5FCRJvZyvK29sy',
         'bSFksvslqiyEGj7ABWOUkx2wJZkkrSca5Puts3CTFYc', {'from': user})
 
-    # box.addTeamMember('0x3428B1746Dfd26C7C725913D829BE2706AA89B2e', {'from': user})
-    # box.addTeamMember('0x63a9dbce75413036b2b778e670aabd4493aaf9f3', {'from': user})
-    # box.addTeamMember('0x4c7bedfa26c744e6bd61cbdf86f3fc4a76dca073', {'from': user})
-    # box.addTeamMember('0xf521Bb7437bEc77b0B15286dC3f49A87b9946773', {'from': user})
-    # box.addTeamMember('0x3945476E477De76d53b4833a46c806Ef3D72b21E', {'from': user})
-
-    # box.setTeamShare('0x3428B1746Dfd26C7C725913D829BE2706AA89B2e', 580, {'from': user})
-    # box.setTeamShare('0x63a9dbce75413036b2b778e670aabd4493aaf9f3', 10, {'from': user})
-    # box.setTeamShare('0x4c7bedfa26c744e6bd61cbdf86f3fc4a76dca073', 30, {'from': user})
-    # box.setTeamShare('0xf521Bb7437bEc77b0B15286dC3f49A87b9946773', 30, {'from': user})
-    # box.setTeamShare('0x3945476E477De76d53b4833a46c806Ef3D72b21E', 10, {'from': user})
-
-
     box.transferOwnership('0xAd67593b01385792CA671ABe6d975801c2e86D22', {'from':user})
 
