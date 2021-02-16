@@ -24,13 +24,13 @@ contract HasSecondaryBoxSaleFees is ERC165 {
     }
 
     function getFeeRecipients(uint256 id) public view returns (address payable[] memory){
-        address payable[] memory addressArray;
+        address payable[] memory addressArray = new address payable[](1);
         addressArray[0] = teamAddress;
         return addressArray;
     }
     
     function getFeeBps(uint256 id) public view returns (uint[] memory){
-        uint[] memory bpsArray;
+        uint[] memory bpsArray = new uint[](1);
         bpsArray[0] = teamSecondaryBps; 
         return bpsArray;
     }

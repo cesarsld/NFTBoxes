@@ -48,6 +48,7 @@ contract NFTBoxesNFT is ERC721, Ownable, HasSecondarySaleFees {
 	mapping(uint256 => string) hashIPFSMemory;
 	mapping(uint256 => string) hashArweaveMemory;
 	mapping(uint256 => string) artistNameMemory;
+	mapping(uint256 => string) artistNoteMemory;
 	mapping(uint256 => address) signatureAddressMemory;
 	mapping(uint256 => string) signatureHashMemory;
 	mapping(uint256 => string) signatureMessageMemory;
@@ -71,7 +72,6 @@ contract NFTBoxesNFT is ERC721, Ownable, HasSecondarySaleFees {
 	event NewNFTMouldCreated(uint256 NFTIndex, string artworkHashIPFS, string artworkHashArweave, string artistName, 
 	uint256 editionSize, string artTitle, string artworkType, string artworkSeries);
 	event NewNFTMouldSignatures(uint256 NFTIndex, address signatureAddress, string signatureHash, string signatureMessage);
-	event NewNFTMouldRoyalties(address royaltyAddress, uint256 royaltyBps);
 	event NewNFTCreatedFor(uint256 NFTId, uint256 tokenId, address recipient);
 	event CloseNFTWindow(uint256 NFTId);
 	
@@ -87,7 +87,8 @@ contract NFTBoxesNFT is ERC721, Ownable, HasSecondarySaleFees {
 	function createNFTMould(
 		string memory artworkHashIPFS,
 		string memory artworkHashArweave,
-		string memory artistName, 
+		string memory artistName,
+		string memory artistNote,
 		address signatureAddress,
 		string memory signatureHash,
 		string memory signatureMessage, 
@@ -103,6 +104,7 @@ contract NFTBoxesNFT is ERC721, Ownable, HasSecondarySaleFees {
 		hashIPFSMemory[NFTIndex] = artworkHashIPFS;
 		hashArweaveMemory[NFTIndex] = artworkHashArweave;
 		artistNameMemory[NFTIndex] = artistName;
+		artistNoteMemory[NFTIndex] = artistNote;
 		
 		signatureAddressMemory[NFTIndex] = signatureAddress;
 		signatureHashMemory[NFTIndex] = signatureHash;
@@ -171,11 +173,12 @@ contract NFTBoxesNFT is ERC721, Ownable, HasSecondarySaleFees {
 		artworkType = artworkTypeMemory[NFTRef];        
 	}
 
-	function getMetadata(uint256 tokenId) public view returns (string memory artistName, uint256 editionSize, string memory artTitle, uint256 editionNumber, string memory boxDetails, bool isActive) {
+	function getMetadata(uint256 tokenId) public view returns (string memory artistName, string memory artistNote, uint256 editionSize, string memory artTitle, uint256 editionNumber, string memory boxDetails, bool isActive) {
 		require(_exists(tokenId), "Token does not exist.");
 		uint256 NFTRef = artworkNFTReference[tokenId];
 		
 		artistName = artistNameMemory[NFTRef];
+		artistNote = artistNoteMemory[NFTRef];
 		editionSize = editionSizeMemory[NFTRef];
 		artTitle = artTitleMemory[NFTRef];
 		editionNumber = editionNumberMemory[tokenId];
@@ -200,8 +203,9 @@ contract NFTBoxesNFT is ERC721, Ownable, HasSecondarySaleFees {
 		unmintedEditions = editionSizeMemory[NFTId] - totalMinted[NFTId];
 	}
 
-	function NFTMouldMetadata(uint256 NFTId) public view returns (string memory artistName, uint256 editionSize, string memory artTitle, string memory boxDetails, bool isActive) {
+	function NFTMouldMetadata(uint256 NFTId) public view returns (string memory artistName, string memory artistNote, uint256 editionSize, string memory artTitle, string memory boxDetails, bool isActive) {
 		artistName = artistNameMemory[NFTId];
+		artistNote = artistNoteMemory[NFTId];
 		editionSize = editionSizeMemory[NFTId];
 		artTitle = artTitleMemory[NFTId];
 		boxDetails = boxDetailsMemory[NFTId];
