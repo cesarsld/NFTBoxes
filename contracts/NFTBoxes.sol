@@ -215,7 +215,7 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 	function _buy(uint128 _currentEdition, uint256 _id, uint256 _new) internal {
 		boxes[totalSupply() + 1] = Box(_id, _currentEdition + _new + 1);
 		//safe mint?
-		emit BoxBought(_id, _currentEdition + _new, totalSupply());
+		emit BoxBought(_id, _currentEdition + _new + 1, totalSupply() + 1);
 		_mint(msg.sender, totalSupply() + 1);
 	}
 
