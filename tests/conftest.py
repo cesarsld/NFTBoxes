@@ -32,6 +32,10 @@ def nftbox(NFTBoxesBox, minter, accounts):
     return NFTBoxesBox.deploy({'from':minter})
 
 @pytest.fixture()
+def voucher(BoxVoucher, minter, accounts):
+    return BoxVoucher.deploy({'from':minter})
+
+@pytest.fixture()
 def joy(NFTBoxesNFT, minter, accounts):
     return NFTBoxesNFT.deploy({'from':minter})
 

@@ -4,6 +4,7 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "../interfaces/IVendingMachine.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "../interfaces/IBoxVoucher.sol";
 
 contract HasSecondaryBoxSaleFees is ERC165 {
     
@@ -44,7 +45,7 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 		uint8				live; // bool
 		uint8				shared; // bool
 		uint128				maxEdition;
-		uint152				maxBuyAmount;
+		uint128				maxBuyAmount;
 		uint128				currentEditionCount;
 		uint256				price;
 		address payable[]	artists;
@@ -62,6 +63,7 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 	}
 
 	IVendingMachine public	vendingMachine;
+	IBoxVoucher public		boxVoucher;
 	uint256 public			boxMouldCount;
 
 	uint256 constant public TOTAL_SHARES = 1000;
@@ -69,28 +71,35 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 	mapping(uint256 => BoxMould) public	boxMoulds;
 	mapping(uint256 =>  Box) public	boxes;
 	mapping(uint256 => bool) public lockedBoxes;
+	mapping(uint256 => uint256) public voucherValidityInterval;
+	mapping(uint256 => address[]) public reservations;
 
 	mapping(address => uint256) public teamShare;
 	address payable[] public team;
+
+	uint256 gasMoney;
 
 	mapping(address => bool) public authorisedCaller;
 
 	event BoxMouldCreated(uint256 id);
 	event BoxBought(uint256 indexed boxMould, uint256 boxEdition, uint256 tokenId);
+	event BatchDeployed(uint256 indexed boxMould, uint256 batchSize);
 
 	constructor() public {
 		_setBaseURI("https://nftboxesbox.azurewebsites.net/api/HttpTrigger?id=");
-		team.push(payable(0x3428B1746Dfd26C7C725913D829BE2706AA89B2e));
-		team.push(payable(0x63a9dbCe75413036B2B778E670aaBd4493aAF9F3));
-		team.push(payable(0x4C7BEdfA26C744e6bd61CBdF86F3fc4a76DCa073));
-		team.push(payable(0xf521Bb7437bEc77b0B15286dC3f49A87b9946773));
-		team.push(payable(0x3945476E477De76d53b4833a46c806Ef3D72b21E));
+		// team.push(payable(0x3428B1746Dfd26C7C725913D829BE2706AA89B2e));
+		// team.push(payable(0x63a9dbCe75413036B2B778E670aaBd4493aAF9F3));
+		// team.push(payable(0x4C7BEdfA26C744e6bd61CBdF86F3fc4a76DCa073));
+		// team.push(payable(0xf521Bb7437bEc77b0B15286dC3f49A87b9946773));
+		// team.push(payable(0x3945476E477De76d53b4833a46c806Ef3D72b21E));
+		// team.push(payable(0xd084c5fF298E951E0e4CD29dD29684d5a54C0d8e));
 
-		teamShare[address(0x3428B1746Dfd26C7C725913D829BE2706AA89B2e)] = 580;
-		teamShare[address(0x63a9dbCe75413036B2B778E670aaBd4493aAF9F3)] = 10;
-		teamShare[address(0x4C7BEdfA26C744e6bd61CBdF86F3fc4a76DCa073)] = 30;
-		teamShare[address(0xf521Bb7437bEc77b0B15286dC3f49A87b9946773)] = 30;
-		teamShare[address(0x3945476E477De76d53b4833a46c806Ef3D72b21E)] = 10;
+		// teamShare[address(0x3428B1746Dfd26C7C725913D829BE2706AA89B2e)] = 630;
+        // teamShare[address(0x63a9dbCe75413036B2B778E670aaBd4493aAF9F3)] = 10;
+        // teamShare[address(0x4C7BEdfA26C744e6bd61CBdF86F3fc4a76DCa073)] = 30;
+        // teamShare[address(0xf521Bb7437bEc77b0B15286dC3f49A87b9946773)] = 30;
+        // teamShare[address(0x3945476E477De76d53b4833a46c806Ef3D72b21E)] = 10;
+        // teamShare[address(0xd084c5fF298E951E0e4CD29dD29684d5a54C0d8e)] = 20;
 	}
 
 	function updateURI(string memory newURI) public onlyOwner {
@@ -136,6 +145,7 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 	function createBoxMould(
 		uint128 _max,
 		uint128 _maxBuyAmount,
+		uint128 _reserve,
 		uint256 _price,
 		address payable[] memory _artists,
 		uint256[] memory _shares,
@@ -147,6 +157,7 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 		external
 		onlyOwner {
 		require(_artists.length == _shares.length, "NFTBoxes: arrays are not of same length.");
+		require(_reserve <= _max, "NFTBoxes: Cannot mint more vouchers than boxes");
 		boxMoulds[boxMouldCount + 1] = BoxMould({
 			live: uint8(0),
 			shared: uint8(0),
@@ -164,6 +175,7 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 		});
 		boxMouldCount++;
 		lockedBoxes[boxMouldCount] = true;
+		boxVoucher.mintFor(msg.sender, boxMouldCount, _reserve);
 		emit BoxMouldCreated(boxMouldCount);
 	}
 
@@ -188,35 +200,87 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 	}
 
 	// dont even need this tbh?
-	function getArtistRoyalties(uint256 _id) external view returns (address payable[] memory artists, uint256[] memory royalties) {
-		require(_id <= boxMouldCount && _id > 0, "NFTBoxes: Mould ID does not exist.");
-		BoxMould memory boxMould = boxMoulds[_id];
-		artists = boxMould.artists;
-		royalties = boxMould.shares;
-	}
+	// function getArtistRoyalties(uint256 _id) external view returns (address payable[] memory artists, uint256[] memory royalties) {
+	// 	require(_id <= boxMouldCount && _id > 0, "NFTBoxes: Mould ID does not exist.");
+	// 	BoxMould memory boxMould = boxMoulds[_id];
+	// 	artists = boxMould.artists;
+	// 	royalties = boxMould.shares;
+	// }
 
 	function buyManyBoxes(uint256 _id, uint128 _quantity) external payable {
 		BoxMould storage boxMould = boxMoulds[_id];
 		uint128 currentEdition = boxMould.currentEditionCount;
 		uint128 max = boxMould.maxEdition;
-		require(_id <= boxMouldCount && _id > 0, "NFTBoxes: Mould ID does not exist.");
+		require(_id <= boxMouldCount && _id > 0, "NFTBoxes: Mould ID does not exist");
 		require(!lockedBoxes[_id], "NFTBoxes: Box is locked");
-		require(boxMould.price.mul(_quantity) == msg.value, "NFTBoxes: Wrong total price.");
-		require(currentEdition + _quantity <= max, "NFTBoxes: Minting too many boxes.");
-		require(_quantity <= boxMould.maxBuyAmount, "NFTBoxes: Cannot buy this many boxes.");
+		require(voucherValidityInterval[_id] != 0 && block.timestamp > voucherValidityInterval[_id],
+			"NFTBoxes: Buy window not open");
+		require(boxMould.price.mul(_quantity) == msg.value, "NFTBoxes: !price");
+		require(currentEdition + _quantity <= max, "NFTBoxes: Too many boxes");
+		require(_quantity <= boxMould.maxBuyAmount, "NFTBoxes: !buy");
 
 		for (uint128 i = 0; i < _quantity; i++)
-			_buy(currentEdition, _id, i);
+			_buy(currentEdition, _id, i, msg.sender);
 		boxMould.currentEditionCount += _quantity;
 		if (currentEdition + _quantity == max)
 			boxMould.live = uint8(1);
 	}
 
-	function _buy(uint128 _currentEdition, uint256 _id, uint256 _new) internal {
+	function buyBoxesWithVouchers(uint256 _id, uint128 _quantity) external payable {
+		BoxMould storage boxMould = boxMoulds[_id];
+		uint128 currentEdition = boxMould.currentEditionCount;
+		uint128 max = boxMould.maxEdition;
+		require(_id <= boxMouldCount && _id > 0, "NFTBoxes: Mould ID does not exist");
+		require(!lockedBoxes[_id], "NFTBoxes: Box is locked");
+		require(boxMould.price.mul(_quantity) == msg.value, "NFTBoxes: !price");
+
+		boxVoucher.burnFrom(msg.sender, _id, _quantity);
+		for (uint128 i = 0; i < _quantity; i++)
+			_buy(currentEdition, _id, i, msg.sender);
+		boxMould.currentEditionCount += _quantity;
+		if (currentEdition + _quantity == max)
+			boxMould.live = uint8(1);
+	}
+
+	function reserveBoxes(uint256 _id, uint256 _quantity) external payable {
+		BoxMould memory boxMould = boxMoulds[_id];
+		require(_id <= boxMouldCount && _id > 0, "NFTBoxes: Mould ID does not exist");
+		require(voucherValidityInterval[_id] == 0, "NFTBoxes: Cannot reserve anymore");
+		require(boxMould.price.mul(_quantity).mul(21).div(20) == msg.value, "NFTBoxes: !price");
+		boxVoucher.burnFrom(msg.sender, _id, _quantity);
+		for (uint256 i = 0; i < _quantity; i++)
+			reservations[_id].push(msg.sender);
+		gasMoney = gasMoney.add(msg.value.sub(boxMould.price.mul(_quantity)));
+	}
+
+	function distributeReservedBoxes(uint256 _id, uint256 _amount) external authorised {
+		require(_id <= boxMouldCount && _id > 0, "NFTBoxes: Mould ID does not exist");
+		require(!lockedBoxes[_id], "NFTBoxes: Box is locked");
+		require(voucherValidityInterval[_id] == 0, "NFTBoxes: Box distribution over");
+
+		BoxMould storage boxMould = boxMoulds[_id];
+		uint128 currentEdition = boxMould.currentEditionCount;
+		uint256 length = reservations[_id].length;
+		uint256 i = 0;
+		while (length > 0 && _amount > 0) {
+			_buy(currentEdition, _id, i, reservations[_id][length - 1]);
+			reservations[_id].pop();
+			length--;
+			_amount--;
+			i++;
+		}
+		boxMould.currentEditionCount += uint128(i);
+		if (currentEdition + i == boxMould.maxEdition)
+			boxMould.live = uint8(1);
+		if (length == 0)
+			voucherValidityInterval[_id] = block.timestamp + 900;
+	}
+
+	function _buy(uint128 _currentEdition, uint256 _id, uint256 _new, address _recipient) internal {
 		boxes[totalSupply() + 1] = Box(_id, _currentEdition + _new + 1);
 		//safe mint?
 		emit BoxBought(_id, _currentEdition + _new + 1, totalSupply() + 1);
-		_mint(msg.sender, totalSupply() + 1);
+		_mint(_recipient, totalSupply() + 1);
 	}
 
 	// close a sale if not sold out
@@ -230,9 +294,13 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 		vendingMachine = IVendingMachine(_machine);
 	}
 
+	function setBoxVoucher(address _vouchers) external onlyOwner {
+		boxVoucher = IBoxVoucher(_vouchers);
+	}
+
 	function distributeOffchain(uint256 _id, address[][] calldata _recipients, uint256[] calldata _ids) external authorised {
 		BoxMould memory boxMould= boxMoulds[_id];
-		require(boxMould.live == 1, "NTFBoxes: Box is still live, cannot start distribution");
+		require(boxMould.live == 1, "NTFBoxes: Box is still live");
 		require (_recipients[0].length == _ids.length, "NFTBoxes: Wrong array size.");
 
 		// i is batch number
@@ -241,13 +309,14 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 			for (uint256 j = 0;j <  _recipients[0].length; j++)
 				vendingMachine.NFTMachineFor(_ids[j], _recipients[i][j]);
 		}
+		emit BatchDeployed(_id, _recipients.length);
 	}
 
 	function distributeShares(uint256 _id) external {
 		BoxMould storage boxMould= boxMoulds[_id];
-		require(_id <= boxMouldCount && _id > 0, "NFTBoxes: Mould ID does not exist.");
-		require(boxMould.live == 1 && boxMould.shared == 0,  "NFTBoxes: cannot distribute shares yet.");
-		require(is100(_id), "NFTBoxes: shares do not add up to 100%.");
+		require(_id <= boxMouldCount && _id > 0, "NFTBoxes: ID !exist.");
+		require(boxMould.live == 1 && boxMould.shared == 0,  "NFTBoxes: cannot distribute");
+		require(is100(_id), "NFTBoxes: sum != 100%.");
 
 		boxMould.shared = 1;
 		uint256 rev = uint256(boxMould.currentEditionCount).mul(boxMould.price);
@@ -274,8 +343,8 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 		return total == TOTAL_SHARES;
 	}
 
-	function _getNewSeed(bytes32 _seed) public pure returns (bytes32) {
-		return keccak256(abi.encodePacked(_seed));
+	function getReservationCount(uint256 _id) external view returns(uint256) {
+		return reservations[_id].length;
 	}
 
 	function getArtist(uint256 _id) external view returns (address payable[] memory) {

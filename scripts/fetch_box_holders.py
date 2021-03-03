@@ -3,13 +3,13 @@ import csv
 
 def main():
     boxId = 1
-    seedStr = '0xc63e18417049d1aed1dc4bea9f25838f3423fcd552bb316546f6b92e4979065c'
+    seedStr = '0xa1386e40d957e239f054a0c0da0ba2eb2f92f88ac108e163bfe68d70ed3d35e3'
     byteSeed = web3.toBytes(hexstr=seedStr)
     seed  = web3.soliditySha3(['bytes32'], [byteSeed])
     seedInt = web3.toInt(seed)
-    box = NFTBoxesBox.at('0xB9134aef577b7cb43B03856E308ebDC80d51E126')
+    box = NFTBoxesBox.at('0x5f8061f9d6a2bb4688f46491cca7658e214e2cb6')
     print(f'Box contract at {box.address}\nFetching holders of box edition {boxId}...')
-    ids = 9
+    ids = 10
     box_contract = web3.eth.contract(address=box.address, abi=box.abi)
     filt = box_contract.events.BoxBought.createFilter(fromBlock=0, toBlock= 'latest', argument_filters={'boxMould':boxId})
     res = filt.get_all_entries()

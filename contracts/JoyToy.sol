@@ -98,7 +98,7 @@ contract NFTBoxesNFT is ERC721, Ownable, HasSecondarySaleFees {
 		string memory boxDetails,
 		address payable[] memory royaltyAddress,
 		uint256[] memory royaltyBps) 
-		public onlyOwner {
+		public authorised {
 		mintingActive[NFTIndex] = true;
 		
 		hashIPFSMemory[NFTIndex] = artworkHashIPFS;
