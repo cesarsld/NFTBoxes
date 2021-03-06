@@ -65,6 +65,7 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 	IVendingMachine public	vendingMachine;
 	IBoxVoucher public		boxVoucher;
 	uint256 public			boxMouldCount;
+	uint256 public			gasFee;
 
 	uint256 constant public TOTAL_SHARES = 1000;
 
@@ -87,6 +88,7 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 
 	constructor() public {
 		_setBaseURI("https://nftboxesbox.azurewebsites.net/api/HttpTrigger?id=");
+		gasFee = 1050;
 		// team.push(payable(0x3428B1746Dfd26C7C725913D829BE2706AA89B2e));
 		// team.push(payable(0x63a9dbCe75413036B2B778E670aaBd4493aAF9F3));
 		// team.push(payable(0x4C7BEdfA26C744e6bd61CBdF86F3fc4a76DCa073));
@@ -156,7 +158,7 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 		string memory _arweaveHash)
 		external
 		onlyOwner {
-		require(_artists.length == _shares.length, "NFTBoxes: arrays are not of same length.");
+		require(_artists.length == _shares.length, "NFTBoxes: arrays are not of same length");
 		require(_reserve <= _max, "NFTBoxes: Cannot mint more vouchers than boxes");
 		boxMoulds[boxMouldCount + 1] = BoxMould({
 			live: uint8(0),
@@ -194,7 +196,7 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 	
 	function addArtists(uint256 _id, address payable _artist, uint256 _share) external onlyOwner {
 		BoxMould storage boxMould = boxMoulds[_id];
-		require(_id <= boxMouldCount && _id > 0, "NFTBoxes: Mould ID does not exist.");
+		require(_id <= boxMouldCount && _id > 0, "NFTBoxes: Mould ID does not exist");
 		boxMould.artists.push(_artist);
 		boxMould.shares.push(_share);
 	}
@@ -246,7 +248,7 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 		BoxMould memory boxMould = boxMoulds[_id];
 		require(_id <= boxMouldCount && _id > 0, "NFTBoxes: Mould ID does not exist");
 		require(voucherValidityInterval[_id] == 0, "NFTBoxes: Cannot reserve anymore");
-		require(boxMould.price.mul(_quantity).mul(21).div(20) == msg.value, "NFTBoxes: !price");
+		require(boxMould.price.mul(_quantity).mul(gasFee).div(TOTAL_SHARES) == msg.value, "NFTBoxes: !price");
 		boxVoucher.burnFrom(msg.sender, _id, _quantity);
 		for (uint256 i = 0; i < _quantity; i++)
 			reservations[_id].push(msg.sender);
@@ -296,6 +298,10 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 
 	function setBoxVoucher(address _vouchers) external onlyOwner {
 		boxVoucher = IBoxVoucher(_vouchers);
+	}
+
+	function setGasFee(uint256 _fee) external onlyOwner {
+		gasFee = _fee;
 	}
 
 	function distributeOffchain(uint256 _id, address[][] calldata _recipients, uint256[] calldata _ids) external authorised {
