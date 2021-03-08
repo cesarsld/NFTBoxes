@@ -9,7 +9,7 @@ contract BoxVoucher is ERC1155("some uri"), Ownable {
 
 	mapping(address => bool) public authorisedCallers;
 	mapping(uint256 => uint256) public _supplies;
-
+	mapping(uint256 => bool) public locked;
 	mapping(uint256 => string) public uris;
 
 	modifier authorised() {
@@ -29,6 +29,10 @@ contract BoxVoucher is ERC1155("some uri"), Ownable {
 		authorisedCallers[_caller] = _value;
 	}
 
+	function setLock(uint256 _id, bool _lock) external authorised {
+		locked[_id] = _lock;
+	}
+
 	function mintFor(address _to, uint256 _id, uint256 _amount) external authorised {
 		_mint(_to, _id, _amount, "");
 		_supplies[_id] = _supplies[_id].add(_amount);
@@ -41,5 +45,39 @@ contract BoxVoucher is ERC1155("some uri"), Ownable {
 
 	function totalSupply(uint256 _id) external view returns(uint256) {
 		return _supplies[_id];
+	}
+
+	function safeTransferFrom(
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes memory data
+    )
+        public
+        virtual
+        override
+    {
+		require(!locked[id], "BoxVoucher: voucher ID is locked");
+        super.safeTransferFrom(from, to, id, amount, data);
+    }
+
+    /**
+     * @dev See {IERC1155-safeBatchTransferFrom}.
+     */
+    function safeBatchTransferFrom(
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    )
+        public
+        virtual
+        override
+    {
+		for (uint256 i = 0; i < ids.length; i++)
+			require(!locked[ids[i]], "BoxVoucher: voucher ID is locked");
+        super.safeBatchTransferFrom(from, to, ids, amounts, data);
 	}
 }
