@@ -90,6 +90,33 @@ def test_reservation_queue(nftbox, voucher, minter, accounts, chain):
     nftbox.distributeReservedBoxes(1, 10, {'from':minter})
     assert nftbox.getReservationCount(1) == 10
     assert nftbox.voucherValidityInterval(1) == 0
-    nftbox.distributeReservedBoxes(1, 10, {'from':minter})
+    nftbox.distributeReservedBoxes(1, 13, {'from':minter})
     assert nftbox.getReservationCount(1) == 0
     assert nftbox.voucherValidityInterval(1) != 0
+    for i in range(1, 6):
+        assert nftbox.balanceOf(accounts[i]) == 4
+
+def test_withdraw_gas(nftbox, voucher, minter, accounts, chain):
+    voucher.setCaller(nftbox, True, {'from':minter})
+    nftbox.setBoxVoucher(voucher, {'from':minter})
+    nftbox.createBoxMould(50, 50, 20, Wei('0.1 ether'), [], [], "This is a test box", "", "", "", "", {'from':minter})
+    for i in range(1, 6):
+        voucher.safeTransferFrom(minter, accounts[i], 1, 4, "", {'from':minter})
+        with brownie.reverts('NFTBoxes: !price'):
+            nftbox.reserveBoxes(1, 4, {'from':accounts[i]})
+        nftbox.reserveBoxes(1, 4, {'from':accounts[i], 'value': Wei('0.1 ether') * 4 * 21 // 20})
+    nftbox.setLockOnBox(1, False, {'from':minter})
+    with brownie.reverts('ERC1155: burn amount exceeds balance'):
+        nftbox.buyBoxesWithVouchers(1, 2, {'from':accounts[0], 'value':Wei('0.1 ether') * 2})
+    nftbox.distributeReservedBoxes(1, 10, {'from':minter})
+    assert nftbox.getReservationCount(1) == 10
+    assert nftbox.voucherValidityInterval(1) == 0
+    nftbox.distributeReservedBoxes(1, 13, {'from':minter})
+    assert nftbox.getReservationCount(1) == 0
+    assert nftbox.voucherValidityInterval(1) != 0
+    for i in range(1, 6):
+        assert nftbox.balanceOf(accounts[i]) == 4
+    pre = minter.balance()
+    nftbox.withdrawGasMoney({'from':minter})
+    assert minter.balance() == pre + 20 * 5 * Wei('0.1 ether') // 100
+    assert nftbox.balance() == 20 * Wei('0.1 ether')

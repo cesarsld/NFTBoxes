@@ -68,6 +68,7 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 	uint256 public			gasFee;
 
 	uint256 constant public TOTAL_SHARES = 1000;
+	uint256 constant DELIMITOR = 100000;
 
 	mapping(uint256 => BoxMould) public	boxMoulds;
 	mapping(uint256 =>  Box) public	boxes;
@@ -89,19 +90,22 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 	constructor() public {
 		_setBaseURI("https://nftboxesbox.azurewebsites.net/api/HttpTrigger?id=");
 		gasFee = 1050;
-		// team.push(payable(0x3428B1746Dfd26C7C725913D829BE2706AA89B2e));
-		// team.push(payable(0x63a9dbCe75413036B2B778E670aaBd4493aAF9F3));
-		// team.push(payable(0x4C7BEdfA26C744e6bd61CBdF86F3fc4a76DCa073));
-		// team.push(payable(0xf521Bb7437bEc77b0B15286dC3f49A87b9946773));
-		// team.push(payable(0x3945476E477De76d53b4833a46c806Ef3D72b21E));
-		// team.push(payable(0xd084c5fF298E951E0e4CD29dD29684d5a54C0d8e));
+		boxMouldCount = 2;
+		team.push(payable(0x3428B1746Dfd26C7C725913D829BE2706AA89B2e));
+		team.push(payable(0x63a9dbCe75413036B2B778E670aaBd4493aAF9F3));
+		team.push(payable(0x4C7BEdfA26C744e6bd61CBdF86F3fc4a76DCa073));
+		team.push(payable(0xf521Bb7437bEc77b0B15286dC3f49A87b9946773));
+		team.push(payable(0x3945476E477De76d53b4833a46c806Ef3D72b21E));
+		team.push(payable(0xd084c5fF298E951E0e4CD29dD29684d5a54C0d8e));
 
-		// teamShare[address(0x3428B1746Dfd26C7C725913D829BE2706AA89B2e)] = 630;
-        // teamShare[address(0x63a9dbCe75413036B2B778E670aaBd4493aAF9F3)] = 10;
-        // teamShare[address(0x4C7BEdfA26C744e6bd61CBdF86F3fc4a76DCa073)] = 30;
-        // teamShare[address(0xf521Bb7437bEc77b0B15286dC3f49A87b9946773)] = 30;
-        // teamShare[address(0x3945476E477De76d53b4833a46c806Ef3D72b21E)] = 10;
-        // teamShare[address(0xd084c5fF298E951E0e4CD29dD29684d5a54C0d8e)] = 20;
+		teamShare[address(0x3428B1746Dfd26C7C725913D829BE2706AA89B2e)] = 600;
+        teamShare[address(0x63a9dbCe75413036B2B778E670aaBd4493aAF9F3)] = 10;
+        teamShare[address(0x4C7BEdfA26C744e6bd61CBdF86F3fc4a76DCa073)] = 30;
+        teamShare[address(0xf521Bb7437bEc77b0B15286dC3f49A87b9946773)] = 60;
+        teamShare[address(0x3945476E477De76d53b4833a46c806Ef3D72b21E)] = 10;
+        teamShare[address(0xd084c5fF298E951E0e4CD29dD29684d5a54C0d8e)] = 20;
+		authorisedCaller[0x63a9dbCe75413036B2B778E670aaBd4493aAF9F3] = true;
+		vendingMachine = IVendingMachine(0x6d4530149e5B4483d2F7E60449C02570531A0751);
 	}
 
 	function updateURI(string memory newURI) public onlyOwner {
@@ -237,6 +241,7 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 		require(boxMould.price.mul(_quantity) == msg.value, "NFTBoxes: !price");
 
 		boxVoucher.burnFrom(msg.sender, _id, _quantity);
+		boxVoucher.mintFor(msg.sender, _id + DELIMITOR, _quantity);
 		for (uint128 i = 0; i < _quantity; i++)
 			_buy(currentEdition, _id, i, msg.sender);
 		boxMould.currentEditionCount += _quantity;
@@ -249,10 +254,17 @@ contract NFTBoxesBox is ERC721("NFTBox", "[BOX]"), Ownable, HasSecondaryBoxSaleF
 		require(_id <= boxMouldCount && _id > 0, "NFTBoxes: Mould ID does not exist");
 		require(voucherValidityInterval[_id] == 0, "NFTBoxes: Cannot reserve anymore");
 		require(boxMould.price.mul(_quantity).mul(gasFee).div(TOTAL_SHARES) == msg.value, "NFTBoxes: !price");
+
 		boxVoucher.burnFrom(msg.sender, _id, _quantity);
+		boxVoucher.mintFor(msg.sender, _id + DELIMITOR, _quantity);
 		for (uint256 i = 0; i < _quantity; i++)
 			reservations[_id].push(msg.sender);
 		gasMoney = gasMoney.add(msg.value.sub(boxMould.price.mul(_quantity)));
+	}
+
+	function withdrawGasMoney() external onlyOwner {
+		msg.sender.transfer(gasMoney);
+		gasMoney = 0;
 	}
 
 	function distributeReservedBoxes(uint256 _id, uint256 _amount) external authorised {
